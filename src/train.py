@@ -29,8 +29,7 @@ def step(model, data, loss_fn, optimizer=None, test=True):
     # Set mode for training or testing
     with torch.inference_mode(test):
         for X, y in data:
-            # X, y = X.to(model.device), y.to(model.device)
-            # X = X.unsqueeze(1)
+            X, y = X.to(model.device), y.to(model.device)
 
             # Forward pass
             y_logits = model(X)

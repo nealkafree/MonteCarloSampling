@@ -2,6 +2,7 @@ import random
 
 from scipy.io import loadmat
 import numpy as np
+import torch
 
 
 def prepare_data(dataset_path, random_state=42):
@@ -22,9 +23,9 @@ def prepare_data(dataset_path, random_state=42):
     data = grey(data)
 
     # Normalizing data and making it eatable for pytorch
-    data = np.expand_dims(np.float32(data), 0) / 255
+    data = np.expand_dims(np.float32(data), 1) / 255
     #  Changing labels '10' for '0'
-    y = dataset['y']
+    y = dataset['y'].squeeze()
     y[y == 10] = 0
 
     # Classes in the dataset are not balanced
@@ -42,13 +43,25 @@ def prepare_data(dataset_path, random_state=42):
             x_train.append(image)
             y_train.append(label)
 
-    x_train = np.array(x_train)
-    y_train = np.array(y_train)
+    x_train = torch.tensor(x_train)
+    y_train = torch.tensor(y_train)
 
     # I need to shuffle here, because currently dataset is not homogenic in different parts
-    rng = np.random.default_rng(random_state)
-    p = rng.permutation(len(x_train))
-    x_train = x_train[p]
-    y_train = y_train[p]
+    p = torch.randperm(len(x_train), generator=torch.Generator().manual_seed(random_state))
 
-    return x_train, y_train
+    return x_train[p], y_train[p]
+
+
+from torch.utils.data import Dataset
+
+
+class SVHNDataset(Dataset):
+    def __init__(self, x, y):
+        self.images = x
+        self.labels = y
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        return self.images[idx], self.labels[idx]

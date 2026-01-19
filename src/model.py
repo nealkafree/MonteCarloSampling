@@ -54,6 +54,10 @@ class DropoutCNN(nn.Module):
         x = self.forward(x)
         return F.softmax(x, dim=1).numpy()
 
+    @property
+    def device(self):
+        return next(self.parameters()).device
+
 
 class SOLDropoutCNN(DropoutCNN):
     def __init__(self, dropout):
@@ -237,3 +241,7 @@ class ConcreteDropoutCNN(nn.Module):
         x = self.dropout_layers[3](x, nn.Sequential(self.fc2, self.elu))
 
         return self.fc3(x)
+
+    @property
+    def device(self):
+        return next(self.parameters()).device

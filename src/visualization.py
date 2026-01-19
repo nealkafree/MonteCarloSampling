@@ -1,16 +1,16 @@
 import matplotlib.pyplot as plt
 
-def plot_images(data, rows: int, cols: int, predicted_labels=None):
+def plot_images(x_data, y_data, rows: int, cols: int, predicted_labels=None):
     fig = plt.figure(figsize=(2 * cols, 2 * rows))
     axes = fig.subplots(rows, cols)
     for i, ax in enumerate(axes.flat):
-        ax.imshow(data[i][0].squeeze(), cmap='gray')
+        ax.imshow(x_data[i].squeeze(), cmap='gray')
         ax.set_xticks([])
         ax.set_yticks([])
         if predicted_labels is None:
-            ax.set_title('True: %d' % data[i][1])
+            ax.set_title('True: %d' % y_data[i])
         else:
-            ax.set_title('True: {0}, Pred: {1}'.format(data[i][1], predicted_labels[i]))
+            ax.set_title('True: {0}, Pred: {1}'.format(y_data[i], predicted_labels[i]))
 
 def accuracy_plot(train_acc, valid_acc):
     """
