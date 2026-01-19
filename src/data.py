@@ -21,23 +21,34 @@ def prepare_data(dataset_path, random_state=42):
     # Greyscale data allows us to save on computation (and kind of how it is always done)
     data = grey(data)
 
-    # Normalizing data and changing labels '10' for '0'
-    data = [(np.float32(d) / 255, 0 if l[0] == 10 else l[0]) for d, l in zip(data, dataset['y'])]
+    # Normalizing data and making it eatable for pytorch
+    data = np.expand_dims(np.float32(data), 0) / 255
+    #  Changing labels '10' for '0'
+    y = dataset['y']
+    y[y == 10] = 0
 
     # Classes in the dataset are not balanced
     # I use the size of the smallest class as size for all classes
-    unique = np.unique(dataset['y'], return_counts=True)
+    unique = np.unique(y, return_counts=True)
     class_size = np.min(unique[1])
 
     # And that's how I balance classes
-    train_data = []
+    x_train = []
+    y_train = []
     label_count = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
-    for image, label in data:
+    for image, label in zip(data, y):
         if label_count[label] < class_size:
             label_count[label] += 1
-            train_data.append((image, label))
+            x_train.append(image)
+            y_train.append(label)
+
+    x_train = np.array(x_train)
+    y_train = np.array(y_train)
 
     # I need to shuffle here, because currently dataset is not homogenic in different parts
-    random.Random(random_state).shuffle(train_data)
+    rng = np.random.default_rng(random_state)
+    p = rng.permutation(len(x_train))
+    x_train = x_train[p]
+    y_train = y_train[p]
 
-    return train_data
+    return x_train, y_train
