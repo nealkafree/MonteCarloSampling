@@ -117,9 +117,9 @@ def test_with_sampling(model, data, loss_fn, num_classes, t=50):
 
     with torch.inference_mode():
         for X, y in data:
-            # X, y = X.to(model.device), y.to(model.device)
+            X, y = X.to(model.device), y.to(model.device)
 
-            probs_acc = torch.zeros((X.shape[0], num_classes))
+            probs_acc = torch.zeros((X.shape[0], num_classes)).to(model.device)
             loss_acc = 0
             # Forward pass with sampling
             for _ in range(t):
@@ -173,7 +173,6 @@ def train_model_with_sampling(model, train_loader, validation_loader, max_epochs
         training_history['valid_loss'].append(valid_loss_data)
         training_history['train_acc'].append(train_acc)
         training_history['valid_acc'].append(validation_acc)
-        print(model.cd1.p, model.cd2.p, model.cd3.p, model.cd4.p)
         training_history['probs'].append([cd.p.cpu().data.numpy()[0] for cd in model.dropout_layers])
 
         # Saving model with the highest validation accuracy

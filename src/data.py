@@ -43,8 +43,8 @@ def prepare_data(dataset_path, random_state=42):
             x_train.append(image)
             y_train.append(label)
 
-    x_train = torch.tensor(x_train)
-    y_train = torch.tensor(y_train)
+    x_train = torch.tensor(np.array(x_train))
+    y_train = torch.tensor(np.array(y_train))
 
     # I need to shuffle here, because currently dataset is not homogenic in different parts
     p = torch.randperm(len(x_train), generator=torch.Generator().manual_seed(random_state))

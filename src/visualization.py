@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 def plot_images(x_data, y_data, rows: int, cols: int, predicted_labels=None):
     fig = plt.figure(figsize=(2 * cols, 2 * rows))
@@ -47,4 +48,21 @@ def loss_plot(train_loss, valid_loss):
         )
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
+    plt.legend()
+
+
+def plot_dropout_change(probs_history):
+    probability_changes = np.array(probs_history).T
+
+    colors = ['b', 'g', 'r', 'c']
+
+    plt.figure(figsize=(8, 5))
+    for i, layer_prob in enumerate(probability_changes):
+        plt.plot(
+            layer_prob, color=colors[i], linestyle='dashed',
+            label='Dropout probability ' + str(i + 1)
+        )
+
+    plt.xlabel('Epochs')
+    plt.ylabel('Probability')
     plt.legend()

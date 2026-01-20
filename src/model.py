@@ -170,10 +170,10 @@ class ConcreteDropout(nn.Module):
         self.p = torch.sigmoid(self.p_logit)
 
         if len(x.shape) == 2:
-            u_noise = torch.rand_like(x)
+            u_noise = torch.rand_like(x).to(self.p_logit.device)
         elif len(x.shape) == 4:
             u_shape = (x.shape[0], x.shape[1], 1, 1)
-            u_noise = torch.rand(u_shape)
+            u_noise = torch.rand(u_shape).to(self.p_logit.device)
 
         drop_prob = torch.sigmoid((self.p_logit + torch.log(u_noise + eps) - torch.log(1 - u_noise + eps)) / tmp)
 
@@ -186,7 +186,7 @@ class ConcreteDropout(nn.Module):
 
 
 class ConcreteDropoutCNN(nn.Module):
-    def __init__(self):
+    def __init__(self, weight_regularization: float, dropout_regularization: float):
         super(ConcreteDropoutCNN, self).__init__()
 
         w, d = 1e-6, 1e-3
@@ -199,7 +199,7 @@ class ConcreteDropoutCNN(nn.Module):
         )
 
         self.dropout_layers = nn.ModuleList()
-        self.dropout_layers.append(ConcreteDropout(weight_regularizer=w, dropout_regularizer=d))
+        self.dropout_layers.append(ConcreteDropout(weight_regularization, dropout_regularization))
 
         self.block2 = nn.Sequential(
             nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(3, 3), stride=1, padding='same'),
@@ -208,7 +208,7 @@ class ConcreteDropoutCNN(nn.Module):
             nn.MaxPool2d(kernel_size=(2, 2), stride=2)
         )
 
-        self.dropout_layers.append(ConcreteDropout(weight_regularizer=w, dropout_regularizer=d))
+        self.dropout_layers.append(ConcreteDropout(weight_regularization, dropout_regularization))
 
         self.block3 = nn.Sequential(
             nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding='same'),
@@ -218,11 +218,11 @@ class ConcreteDropoutCNN(nn.Module):
             nn.Flatten()
         )
 
-        self.dropout_layers.append(ConcreteDropout(weight_regularizer=w, dropout_regularizer=d))
+        self.dropout_layers.append(ConcreteDropout(weight_regularization, dropout_regularization))
 
         self.fc1 = nn.Linear(in_features=1024, out_features=128)
 
-        self.dropout_layers.append(ConcreteDropout(weight_regularizer=w, dropout_regularizer=d))
+        self.dropout_layers.append(ConcreteDropout(weight_regularization, dropout_regularization))
 
         self.fc2 = nn.Linear(in_features=128, out_features=32)
         self.fc3 = nn.Linear(in_features=32, out_features=10)
