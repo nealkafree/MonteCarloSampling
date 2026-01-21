@@ -65,3 +65,7 @@ class SVHNDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.images[idx], self.labels[idx]
+
+    def extend(self, x, y):
+        self.images = torch.cat((self.images, x), dim=0)
+        self.labels = torch.cat((self.labels, y), dim=0)

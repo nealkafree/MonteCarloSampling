@@ -50,10 +50,6 @@ class DropoutCNN(nn.Module):
         x = self.dropout(x)
         return self.fc3(x)
 
-    def predict_proba(self, x):
-        x = self.forward(x)
-        return F.softmax(x, dim=1).numpy()
-
     @property
     def device(self):
         return next(self.parameters()).device
@@ -88,7 +84,7 @@ class ConcreteDropout(nn.Module):
     """
 
     def __init__(self, weight_regularizer: float, dropout_regularizer: float,
-                 init_min: float = 0.2, init_max: float = 0.3) -> None:
+                 init_min: float = 0.1, init_max: float = 0.1) -> None:
 
         """Concrete Dropout.
 
@@ -133,19 +129,22 @@ class ConcreteDropout(nn.Module):
             Output from the dropout layer.
         """
 
-        output = layer(self._concrete_dropout(x))
+        if self.training:
+            output = layer(self._concrete_dropout(x))
 
-        sum_of_squares = 0
-        for param in layer.parameters():
-            sum_of_squares += torch.sum(torch.pow(param, 2))
+            sum_of_squares = 0
+            for param in layer.parameters():
+                sum_of_squares += torch.sum(torch.pow(param, 2))
 
-        weights_reg = self.weight_regularizer * sum_of_squares / (1.0 - self.p)
+            weights_reg = self.weight_regularizer * sum_of_squares / (1.0 - self.p)
 
-        dropout_reg = self.p * torch.log(self.p)
-        dropout_reg += (1.0 - self.p) * torch.log(1.0 - self.p)
-        dropout_reg *= self.dropout_regularizer * x.shape[1]
+            dropout_reg = self.p * torch.log(self.p)
+            dropout_reg += (1.0 - self.p) * torch.log(1.0 - self.p)
+            dropout_reg *= self.dropout_regularizer * x.shape[1]
 
-        self.regularisation = weights_reg + dropout_reg
+            self.regularisation = weights_reg + dropout_reg
+        else:
+            output = layer(x)
 
         return output
 
@@ -188,8 +187,6 @@ class ConcreteDropout(nn.Module):
 class ConcreteDropoutCNN(nn.Module):
     def __init__(self, weight_regularization: float, dropout_regularization: float):
         super(ConcreteDropoutCNN, self).__init__()
-
-        w, d = 1e-6, 1e-3
 
         self.block1 = nn.Sequential(
             nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(3, 3), stride=1, padding='same'),
@@ -245,3 +242,26 @@ class ConcreteDropoutCNN(nn.Module):
     @property
     def device(self):
         return next(self.parameters()).device
+
+    def regularisation(self) -> torch.Tensor:
+        """Calculates ConcreteDropout regularisation for each module.
+
+        The total ConcreteDropout can be calculated by iterating through
+        each module in the model and accumulating the regularisation for
+        each compatible layer.
+
+        Returns
+        -------
+        Tensor
+            Total ConcreteDropout regularisation.
+        """
+
+        total_regularisation = 0
+        for layer in self.dropout_layers:
+            total_regularisation += layer.regularisation
+
+        return total_regularisation
+
+    def predict_proba(self, x):
+        x = self.forward(x)
+        return F.softmax(x, dim=1).numpy()

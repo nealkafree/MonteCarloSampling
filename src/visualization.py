@@ -66,3 +66,16 @@ def plot_dropout_change(probs_history):
     plt.xlabel('Epochs')
     plt.ylabel('Probability')
     plt.legend()
+
+
+def plot_accuracy_budget_curve(active_learning_process):
+    samples = active_learning_process.keys()
+    accuracies = active_learning_process.values()
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(
+        samples, accuracies, color='red', linestyle='-',
+        label='Test accuracy'
+    )
+    plt.xlabel('Number of samples')
+    plt.ylabel('Test accuracy')
