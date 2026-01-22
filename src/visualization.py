@@ -60,7 +60,7 @@ def plot_dropout_change(probs_history):
     for i, layer_prob in enumerate(probability_changes):
         plt.plot(
             layer_prob, color=colors[i], linestyle='dashed',
-            label='Dropout probability ' + str(i + 1)
+            label='Dropout layer ' + str(i + 1)
         )
 
     plt.xlabel('Epochs')
@@ -68,14 +68,18 @@ def plot_dropout_change(probs_history):
     plt.legend()
 
 
-def plot_accuracy_budget_curve(active_learning_process):
-    samples = active_learning_process.keys()
-    accuracies = active_learning_process.values()
-
+def plot_accuracy_budget_curves(active_learning_process):
+    colors = ['b', 'g', 'r', 'c', 'k']
     plt.figure(figsize=(8, 5))
-    plt.plot(
-        samples, accuracies, color='red', linestyle='-',
-        label='Test accuracy'
-    )
+    c = 0
+    for name, data in active_learning_process.items():
+        samples = [int(s) for s in data.keys()]
+        accuracies = data.values()
+        plt.plot(
+            samples, accuracies, color=colors[c], linestyle='-',
+            label=name
+        )
+        c += 1
     plt.xlabel('Number of samples')
     plt.ylabel('Test accuracy')
+    plt.legend()

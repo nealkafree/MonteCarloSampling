@@ -118,9 +118,7 @@ def random_baseline(model, x_pool):
 
 
 def selection_strategy_performance(active_learning_process):
-    budget = active_learning_process.keys()
-    accuracy = active_learning_process.values()
-    budget_step = budget[1] - budget[0]
+    accuracy = list(active_learning_process.values())
 
     paulc = 0
     naulc = 0
@@ -128,19 +126,28 @@ def selection_strategy_performance(active_learning_process):
     tnr = 0
     for i in range(len(accuracy) - 1):
         rate_change = accuracy[i + 1] - accuracy[i]
-        area_under_curve = rate_change * budget_step * 0.5
+        area_under_curve = (accuracy[i + 1] + accuracy[i]) * 0.5
         if rate_change > 0:
             tpr += rate_change
             paulc += area_under_curve
         else:
             tnr += rate_change
             naulc += area_under_curve
-    return paulc * tpr - naulc * tnr
+    return (paulc * tpr + naulc * tnr) / (len(accuracy) - 1)
+
+
+def area_under_budget_curve(active_learning_process):
+    accuracy = list(active_learning_process.values())
+    aubc = 0
+    for i in range(len(accuracy) - 1):
+        area_under_curve = (accuracy[i + 1] + accuracy[i]) * 0.5
+        aubc += area_under_curve
+    return aubc / (len(accuracy) - 1)
 
 
 def max_accuracy(active_learning_process):
-    budget = active_learning_process.keys()
-    accuracy = active_learning_process.values()
+    budget = list(active_learning_process.keys())
+    accuracy = list(active_learning_process.values())
 
     max_idx = np.argmax(accuracy)
     return accuracy[max_idx], budget[max_idx]
