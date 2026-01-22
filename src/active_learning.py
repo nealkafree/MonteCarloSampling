@@ -58,7 +58,9 @@ class ActiveLearning(object):
         self.trained_model.eval()
 
         with torch.inference_mode():
-            uncertainty_pool = self.uncertainty_fn(self.trained_model, self.x_pool)
+            uncertainty_pool = self.uncertainty_fn(self.trained_model, self.x_pool.to(self.device))
+
+        uncertainty_pool = torch.tensor(uncertainty_pool)
 
         most_uncertain = torch.topk(uncertainty_pool, self.sample_batch_size, sorted=False)
 
@@ -67,7 +69,8 @@ class ActiveLearning(object):
         self.x_pool = np.delete(self.x_pool, most_uncertain[1], axis=0)
         self.y_pool = np.delete(self.y_pool, most_uncertain[1], axis=0)
 
-        train_loader = DataLoader(self.train_dataset, batch_size=64, shuffle=False, num_workers=4)
+        train_loader = DataLoader(self.train_dataset, batch_size=64, shuffle=True, num_workers=4,
+                                  generator=torch.Generator().manual_seed(42))
 
         torch.manual_seed(42)
         torch.cuda.manual_seed(42)
@@ -86,32 +89,32 @@ class ActiveLearning(object):
 
 
 def montecarlo_entropy(model, x_pool, num_classes=10, t=50):
-    model.eval()
-
     for layer in model.dropout_layers:
         layer.train()
 
     batch_size = 250
     batched_len = math.ceil(len(x_pool) / batch_size)
     uncertainties = torch.empty((0,))
-    with torch.inference_mode():
-        for i in range(batched_len):
-            X = x_pool[i * batch_size:(i + 1) * batch_size]
-            X = X.to(model.device)
+    for i in range(batched_len):
+        X = x_pool[i * batch_size:(i + 1) * batch_size]
 
-            probs_acc = torch.zeros((X.shape[0], num_classes)).to(model.device)
-            # Forward pass with sampling
-            for _ in range(t):
-                y_logits = model(X)
-                y_probs = torch.softmax(y_logits, dim=1)
-                probs_acc += y_probs
+        probs_acc = torch.zeros((X.shape[0], num_classes)).to(model.device)
+        # Forward pass with sampling
+        for _ in range(t):
+            y_logits = model(X)
+            y_probs = torch.softmax(y_logits, dim=1)
+            probs_acc += y_probs
 
-            probs_acc = probs_acc / t
-            uncertainty = torch.tensor(entropy(probs_acc.to('cpu'), axis=1))
+        probs_acc = probs_acc / t
+        uncertainty = torch.tensor(entropy(probs_acc.to('cpu'), axis=1))
 
-            uncertainties = torch.cat((uncertainties, uncertainty), dim=0)
+        uncertainties = torch.cat((uncertainties, uncertainty), dim=0)
 
     return uncertainties
+
+
+def random_baseline(model, x_pool):
+    return torch.randperm(x_pool.shape[0])
 
 
 def selection_strategy_performance(active_learning_process):

@@ -264,4 +264,4 @@ class ConcreteDropoutCNN(nn.Module):
 
     def predict_proba(self, x):
         x = self.forward(x)
-        return F.softmax(x, dim=1).numpy()
+        return F.softmax(x, dim=1).to('cpu').numpy()
