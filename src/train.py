@@ -1,10 +1,16 @@
 import copy
+from typing import Callable, Optional
 
 import torch
+from torch.utils.data import DataLoader
 from tqdm.notebook import tqdm
 
 
-def step(model, data, loss_fn, optimizer=None, test=True):
+def step(model: "Model being trained",
+         data: DataLoader,
+         loss_fn: Callable,
+         optimizer: Optional[torch.optim.optimizer] = None,
+         test: bool = True) -> (float, float):
     """
     Performs one training or test step (depends on parameters).
     :param model:
@@ -33,6 +39,8 @@ def step(model, data, loss_fn, optimizer=None, test=True):
             y_logits = model(X)
 
             performance_loss = loss_fn(y_logits, y)
+
+            # If dropout layers are trainable, add their loss
             if hasattr(model, 'dropout_layers'):
                 dropout_loss = model.regularisation()
                 performance_loss = performance_loss + dropout_loss
@@ -60,13 +68,19 @@ def step(model, data, loss_fn, optimizer=None, test=True):
     return acc, loss_sum
 
 
-def train_model(model, train_loader, validation_loader, max_epochs, loss_fn, optimizer, disable_logs=False):
+def train_model(model: "Model being trained",
+                train_loader: DataLoader,
+                validation_loader: DataLoader,
+                epochs: int,
+                loss_fn: Callable,
+                optimizer: torch.optim.optimizer,
+                disable_logs: bool = False) -> (dict, dict):
     """
     Trains model for set amount of epochs.
     :param model:
     :param train_loader:
     :param validation_loader:
-    :param max_epochs:
+    :param epochs:
     :param loss_fn:
     :param optimizer:
     :param disable_logs: False to print logs, True if not.
@@ -80,7 +94,7 @@ def train_model(model, train_loader, validation_loader, max_epochs, loss_fn, opt
         'probs': []
     }
 
-    for epoch in tqdm(range(max_epochs), disable=disable_logs):
+    for epoch in tqdm(range(epochs), disable=disable_logs):
         # Train step
         train_acc, train_loss_data = step(model, train_loader, loss_fn, optimizer, test=False)
 

@@ -1,7 +1,18 @@
+from typing import Mapping
+
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_images(x_data, y_data, rows: int, cols: int, predicted_labels=None):
+
+def plot_images(x_data: Mapping, y_data: Mapping, rows: int, cols: int, predicted_labels: Mapping | None) -> None:
+    """
+    Plots examples from the dataset.
+    :param x_data: images data
+    :param y_data: labels
+    :param rows: rows on a plot
+    :param cols: columns on a plot
+    :param predicted_labels: labels predicted by the model or None
+    """
     fig = plt.figure(figsize=(2 * cols, 2 * rows))
     axes = fig.subplots(rows, cols)
     for i, ax in enumerate(axes.flat):
@@ -13,7 +24,8 @@ def plot_images(x_data, y_data, rows: int, cols: int, predicted_labels=None):
         else:
             ax.set_title('True: {0}, Pred: {1}'.format(y_data[i], predicted_labels[i]))
 
-def accuracy_plot(train_acc, valid_acc):
+
+def accuracy_plot(train_acc: list, valid_acc: list) -> None:
     """
     Function to plot the change of accuracy during training.
     """
@@ -31,7 +43,8 @@ def accuracy_plot(train_acc, valid_acc):
     plt.ylabel('Accuracy')
     plt.legend()
 
-def loss_plot(train_loss, valid_loss):
+
+def loss_plot(train_loss: list, valid_loss: list) -> None:
     """
     Function to plot the change of loss during training.
     """
@@ -51,7 +64,10 @@ def loss_plot(train_loss, valid_loss):
     plt.legend()
 
 
-def plot_dropout_change(probs_history):
+def plot_dropout_change(probs_history: list) -> None:
+    """
+    Function to plot the change of dropout layers probabilities during training.
+    """
     probability_changes = np.array(probs_history).T
 
     colors = ['b', 'g', 'r', 'c']
@@ -68,7 +84,10 @@ def plot_dropout_change(probs_history):
     plt.legend()
 
 
-def plot_accuracy_budget_curves(active_learning_process):
+def plot_accuracy_budget_curves(active_learning_process: dict) -> None:
+    """
+    Function to plot accuracy vs budget curves for active learning process.
+    """
     colors = ['b', 'g', 'r', 'c', 'k']
     plt.figure(figsize=(8, 5))
     c = 0

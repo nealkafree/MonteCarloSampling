@@ -5,7 +5,12 @@ import numpy as np
 
 
 class DropoutCNN(nn.Module):
-    def __init__(self, dropout):
+    """
+    Implementation of the convolutional neural network for usage with Monte Carlo Dropout.
+    :param dropout: dropout probability for all layers.
+    """
+
+    def __init__(self, dropout: float) -> None:
         super(DropoutCNN, self).__init__()
 
         self.dropout = nn.Dropout(dropout)
@@ -33,7 +38,7 @@ class DropoutCNN(nn.Module):
         self.fc2 = nn.Linear(in_features=128, out_features=32)
         self.fc3 = nn.Linear(in_features=32, out_features=10)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.block1(x)
         x = self.dropout(x)
 
@@ -51,15 +56,23 @@ class DropoutCNN(nn.Module):
         return self.fc3(x)
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
+        """
+        Returns the device on which the model is.
+        """
         return next(self.parameters()).device
 
 
 class SOLDropoutCNN(DropoutCNN):
-    def __init__(self, dropout):
+    """
+    Version of DropoutCNN without dropout layer after penultimate layer.
+    :param dropout: dropout probability for all layers.
+    """
+
+    def __init__(self, dropout) -> None:
         super(SOLDropoutCNN, self).__init__(dropout)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.block1(x)
         x = self.dropout(x)
 
@@ -77,25 +90,16 @@ class SOLDropoutCNN(DropoutCNN):
 
 
 class ConcreteDropout(nn.Module):
-    """Concrete Dropout.
-
-    Implementation of the Concrete Dropout module as described in the
-    'Concrete Dropout' paper: https://arxiv.org/pdf/1705.07832
+    """
+    Implementation of the Concrete Dropout module.
+    :param weight_regularizer: regularizer for weight regularization parameter.
+    :param dropout_regularizer: regularizer for dropout regularization parameter.
+    :param init_min: minimal probability value for parameter initialization.
+    :param init_max: maximal probability value for parameter initialization.
     """
 
     def __init__(self, weight_regularizer: float, dropout_regularizer: float,
                  init_min: float = 0.1, init_max: float = 0.1) -> None:
-
-        """Concrete Dropout.
-
-        Parameters
-        ----------
-        weight_regularizer : float
-        dropout_regularizer : float
-        init_min : float
-        init_max : float
-        """
-
         super().__init__()
 
         self.weight_regularizer = weight_regularizer
@@ -109,83 +113,76 @@ class ConcreteDropout(nn.Module):
 
         self.regularisation = 0.0
 
-    def forward(self, x, layer):
-
-        """Calculates the forward pass.
-
-        The regularisation term for the layer is calculated and assigned to a
-        class attribute - this can later be accessed to evaluate the loss.
-
-        Parameters
-        ----------
-        x : Tensor
-            Input to the Concrete Dropout.
-        layer : nn.Module
-            Layer for which to calculate the Concrete Dropout.
-
-        Returns
-        -------
-        Tensor
-            Output from the dropout layer.
+    def forward(self, x: torch.Tensor, layer: nn.Module) -> torch.Tensor:
         """
-
+        Calculates the forward pass through Concrete Dropout layer.
+        :param x: input to the Concrete Dropout layer.
+        :param layer: layer (or block) after the Concrete Dropout layer, used to calculate regularisation.
+        :return: output after the aforementioned layer (or block).
+        """
         if self.training:
+            # Calculating output
             output = layer(self._concrete_dropout(x))
 
+            # Calculating weight regularization
             sum_of_squares = 0
             for param in layer.parameters():
                 sum_of_squares += torch.sum(torch.pow(param, 2))
-
             weights_reg = self.weight_regularizer * sum_of_squares / (1.0 - self.p)
 
+            # Calculating dropout regularization
             dropout_reg = self.p * torch.log(self.p)
             dropout_reg += (1.0 - self.p) * torch.log(1.0 - self.p)
             dropout_reg *= self.dropout_regularizer * x.shape[1]
 
+            # Saving regularization for this layer
             self.regularisation = weights_reg + dropout_reg
         else:
             output = layer(x)
 
         return output
 
-    def _concrete_dropout(self, x):
-
-        """Computes the Concrete Dropout.
-
-        Parameters
-        ----------
-        x : Tensor
-            Input tensor to the Concrete Dropout layer.
-
-        Returns
-        -------
-        Tensor
-            Outputs from Concrete Dropout.
+    def _concrete_dropout(self, x: torch.Tensor) -> torch.Tensor:
         """
-
+        Computes the Concrete Dropout.
+        :param x: input tensor to the Concrete Dropout layer.
+        :return: output from Concrete Dropout layer.
+        """
+        # Constant for numerical stability
         eps = 1e-7
+        # Temperature parameter. Effect is untested.
         tmp = 0.1
 
         self.p = torch.sigmoid(self.p_logit)
 
+        # Implementation for dense layers
         if len(x.shape) == 2:
             u_noise = torch.rand_like(x).to(self.p_logit.device)
+        # Implementation for convolutional layers
         elif len(x.shape) == 4:
             u_shape = (x.shape[0], x.shape[1], 1, 1)
             u_noise = torch.rand(u_shape).to(self.p_logit.device)
 
+        # Calculating what is to be dropped
         drop_prob = torch.sigmoid((self.p_logit + torch.log(u_noise + eps) - torch.log(1 - u_noise + eps)) / tmp)
 
         random_tensor = 1 - drop_prob
         retain_prob = 1 - self.p
 
+        # Calculating outputs
         x = torch.mul(x, random_tensor) / retain_prob
 
         return x
 
 
 class ConcreteDropoutCNN(nn.Module):
-    def __init__(self, weight_regularization: float, dropout_regularization: float):
+    """
+    Implementation of convolutional neural network which uses Concrete Dropout.
+    :param weight_regularization: regularizer for weight regularization parameter.
+    :param dropout_regularization: regularizer for dropout regularization parameter.
+    """
+
+    def __init__(self, weight_regularization: float, dropout_regularization: float) -> None:
         super(ConcreteDropoutCNN, self).__init__()
 
         self.block1 = nn.Sequential(
@@ -226,7 +223,7 @@ class ConcreteDropoutCNN(nn.Module):
 
         self.elu = nn.ELU()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.block1(x)
 
         x = self.dropout_layers[0](x, self.block2)
@@ -240,20 +237,16 @@ class ConcreteDropoutCNN(nn.Module):
         return self.fc3(x)
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
+        """
+        Returns the device on which the model is.
+        """
         return next(self.parameters()).device
 
     def regularisation(self) -> torch.Tensor:
-        """Calculates ConcreteDropout regularisation for each module.
-
-        The total ConcreteDropout can be calculated by iterating through
-        each module in the model and accumulating the regularisation for
-        each compatible layer.
-
-        Returns
-        -------
-        Tensor
-            Total ConcreteDropout regularisation.
+        """
+        Calculates Concrete Dropout regularisation by combining regularisation from every layer.
+        :return: total Concrete Dropout regularisation.
         """
 
         total_regularisation = 0
@@ -262,6 +255,11 @@ class ConcreteDropoutCNN(nn.Module):
 
         return total_regularisation
 
-    def predict_proba(self, x):
+    def predict_proba(self, x: torch.Tensor) -> np.ndarray:
+        """
+        Needed for compatibility with scikit-learn API.
+        :param x: input data.
+        :return: predicted probabilities.
+        """
         x = self.forward(x)
         return F.softmax(x, dim=1).to('cpu').numpy()

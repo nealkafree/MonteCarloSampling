@@ -1,11 +1,10 @@
-import random
-
 from scipy.io import loadmat
 import numpy as np
 import torch
+from torch.utils.data import Dataset
 
 
-def prepare_data(dataset_path, random_state=42):
+def prepare_data(dataset_path: str, random_state: int = 42) -> (torch.Tensor, torch.Tensor):
     """
     Loads data, prepares it for training and evaluation and balances classes. All in one.
     :param dataset_path: path to .mat file with data.
@@ -52,20 +51,21 @@ def prepare_data(dataset_path, random_state=42):
     return x_train[p], y_train[p]
 
 
-from torch.utils.data import Dataset
-
-
 class SVHNDataset(Dataset):
-    def __init__(self, x, y):
+    """
+    Dataset object to ease operations with DataLoader.
+    """
+
+    def __init__(self, x: torch.Tensor, y: torch.Tensor) -> None:
         self.images = x
         self.labels = y
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.images)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> (torch.Tensor, torch.Tensor):
         return self.images[idx], self.labels[idx]
 
-    def extend(self, x, y):
+    def extend(self, x: torch.Tensor, y: torch.Tensor) -> None:
         self.images = torch.cat((self.images, x), dim=0)
         self.labels = torch.cat((self.labels, y), dim=0)
